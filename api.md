@@ -2,23 +2,93 @@
 
 Users can use the RESTful API to submit queries and retrieve results. The results are in JSON format with straightforward field names.
 
-## API
-### Parameters
-- `<backend server url>` is `address:port`. The port's default value is 50001.
+There are two ways to access the API:
+- **Via the frontend server** (recommended): The frontend server acts as a reverse proxy, forwarding requests to the backend. This is the recommended approach because the backend server is not publicly accessible.
+- **Via the backend server**: Connect directly to the backend server if you have network access to it.
+
+Both methods expose the same endpoints and return identical responses.
+
+## Common Parameters
 - `<email>` and `<jobName>` are optional
 - `<job type>` can be `peptide` and `protein`
 - `<query>` is the peptide or protein (including protein header) sequences
 - `<enzyme>` can be `enzymatic` and `nonspecific`
 - `<uuid>` is a job ID after submitting the query
-- `<protein ID>` is the index of the protein in the JSON retrieved with `<backend server url>/result?jobID=<uuid>`
+- `<protein ID>` is the index of the protein in the result JSON
 - `<p-value>` is the p-value threshold
 - `<e-value>` is the e-value threshold
 - `<q-value>` is the q-value threshold
 - `<PSM cap>` maximum number of PSMs retrieved with the `showSpectrum` option
-- `<protein ID>` is the index of the protein in the JSON retrieved with `<backend server url>/result?jobID=<uuid>`
-- `<sequence ID>` is the index of the sequence in the JSON retrieved with `<backend server url>/showSequence?jobID=<uuid>&proteinID=<protein ID>&q=<q-value>&p=<p-value>&e=<e-value>`
-- `<peptide ID>` is the index of the peptide in the JSON retrieved with `<backend server url>/showPeptide?jobID=<uuid>&proteinID=<protein ID>&sequenceID=<sequence ID>&p=<p-value>&e=<e-value>`
+- `<sequence ID>` is the index of the sequence in the showSequence JSON
+- `<peptide ID>` is the index of the peptide in the showPeptide JSON
 
+---
+
+## Option 1: Via the Frontend Server (Recommended)
+
+The frontend server provides a reverse proxy at `/api/<endpoint>` that forwards requests to the backend. Use this when the backend server is not directly accessible.
+
+- `<frontend server url>` is the public URL of the frontend server (e.g., `https://pepcentric.example.com`)
+- All endpoints use the pattern: `<frontend server url>/api/<endpoint>?<params>`
+- Supported endpoints: `submit`, `jobstatus`, `result`, `showSequence`, `showPeptide`, `showSpectrum`, `countSpectrum`, `dump`
+
+### Submit a query
+```
+<frontend server url>/api/submit?email=<email>&jobName=<job name>&jobType=<job type>&query=<query>&enzyme=<enzyme>
+```
+
+### Check the searching status
+```
+<frontend server url>/api/jobstatus?jobID=<uuid>
+```
+
+### Retrieve the search results
+Get the highest level (protein level) of the search result
+```
+<frontend server url>/api/result?jobID=<uuid>
+```
+
+Get the peptide sequence level result
+```
+<frontend server url>/api/showSequence?jobID=<uuid>&proteinID=<protein ID>&q=<q-value>&p=<p-value>&e=<e-value>
+```
+
+Get the peptidoform level result
+```
+<frontend server url>/api/showPeptide?jobID=<uuid>&proteinID=<protein ID>&sequenceID=<sequence ID>&p=<p-value>&e=<e-value>
+```
+
+Get the PSM level result
+```
+<frontend server url>/api/showSpectrum?jobID=<uuid>&proteinID=<protein ID>&sequenceID=<sequence ID>&peptideID=<peptide ID>&psmCap=<PSM cap>&p=<p-value>&e=<e-value>
+```
+
+Get the number of PSMs given a peptidoform
+```
+<frontend server url>/api/countSpectrum?jobID=<uuid>&proteinID=<protein ID>&sequenceID=<sequence ID>&peptideID=<peptide ID>&p=<p-value>&e=<e-value>
+```
+
+Dump the search result given a job ID. It might take a while if there are many entries
+```
+<frontend server url>/api/dump?jobID=<uuid>&q=<q-value>&p=<p-value>&e=<e-value>
+```
+
+### Error Responses
+The reverse proxy returns the following errors if it cannot reach the backend:
+```json
+{"status": "error", "error": "Backend server is unavailable"}
+```
+```json
+{"status": "error", "error": "Unknown API endpoint: <endpoint>"}
+```
+
+---
+
+## Option 2: Via the Backend Server (If you have access to the backend server)
+
+Connect directly to the backend server. This requires network access to the backend.
+
+- `<backend server url>` is `address:port`. The port's default value is 50001.
 
 ### Submit a query
 ```
@@ -29,7 +99,43 @@ Users can use the RESTful API to submit queries and retrieve results. The result
 ```
 <backend server url>/jobstatus?jobID=<uuid>
 ```
-Retrieved JSON file example
+
+### Retrieve the search results
+Get the highest level (protein level) of the search result
+```
+<backend server url>/result?jobID=<uuid>
+```
+
+Get the peptide sequence level result
+```
+<backend server url>/showSequence?jobID=<uuid>&proteinID=<protein ID>&q=<q-value>&p=<p-value>&e=<e-value>
+```
+
+Get the peptidoform level result
+```
+<backend server url>/showPeptide?jobID=<uuid>&proteinID=<protein ID>&sequenceID=<sequence ID>&p=<p-value>&e=<e-value>
+```
+
+Get the PSM level result
+```
+<backend server url>/showSpectrum?jobID=<uuid>&proteinID=<protein ID>&sequenceID=<sequence ID>&peptideID=<peptide ID>&psmCap=<PSM cap>&p=<p-value>&e=<e-value>
+```
+
+Get the number of PSMs given a peptidoform
+```
+<backend server url>/countSpectrum?jobID=<uuid>&proteinID=<protein ID>&sequenceID=<sequence ID>&peptideID=<peptide ID>&p=<p-value>&e=<e-value>
+```
+
+Dump the search result given a job ID. It might take a while if there are many entries
+```
+<backend server url>/dump?jobID=<uuid>&q=<q-value>&p=<p-value>&e=<e-value>
+```
+
+---
+
+## Examples of Returned JSON files
+
+### jobstatus
 ```json
 {
     "serveTime": 0,
@@ -38,12 +144,7 @@ Retrieved JSON file example
 }
 ```
 
-### Retrieve the search results
-Get the highest level (protein level) of the search result
-```
-<backend server url>/result?jobID=<uuid>
-```
-Retrieved JSON file example
+### result (protein level)
 ```json
 {
     "searchtime": 3696,
@@ -74,11 +175,7 @@ Retrieved JSON file example
 }
 ```
 
-Get the peptide sequence level result
-```
-<backend server url>/showSequence?jobID=<uuid>&proteinID=<protein ID>&q=<q-value>&p=<p-value>&e=<e-value>
-```
-Retrieved JSON file example
+### showSequence (peptide sequence level)
 ```json
 {
     "searchtime": 3696,
@@ -125,11 +222,7 @@ Retrieved JSON file example
 }
 ```
 
-Get the peptidoform level result
-```
-<backend server url>/showPeptide?jobID=<uuid>&proteinID=<protein ID>&sequenceID=<sequence ID>&p=<p-value>&e=<e-value>
-```
-Retrieved JSON file example
+### showPeptide (peptidoform level)
 ```json
 {
     "searchtime": 3696,
@@ -175,11 +268,7 @@ Retrieved JSON file example
 }
 ```
 
-Get the PSM level result
-```
-<backend server url>/showSpectrum?jobID=<uuid>&proteinID=<protein ID>&sequenceID=<sequence ID>&peptideID=<peptide ID>&psmCap=<PSM cap>&p=<p-value>&e=<e-value>
-```
-Retrieved JSON file example
+### showSpectrum (PSM level)
 ```json
 {
     "searchtime": 3696,
@@ -226,11 +315,7 @@ Retrieved JSON file example
 }
 ```
 
-Get the number of PSMs given a peptidoform
-```
-<backend server url>/countSpectrum?jobID=<uuid>&proteinID=<protein ID>&sequenceID=<sequence ID>&peptideID=<peptide ID>&p=<p-value>&e=<e-value>
-```
-Retrieved JSON file example
+### countSpectrum (PSM count)
 ```json
 {
     "searchtime": 3696,
@@ -250,7 +335,5 @@ Retrieved JSON file example
 }
 ```
 
-Dump the search result given a job ID. It might take a while if there are many entries
-```
-<backend server url>/dump?jobID=<uuid>&q=<q-value>&p=<p-value>&e=<e-value>
-```
+### dump
+Returns a binary file (ZIP) as a download. No JSON response.
