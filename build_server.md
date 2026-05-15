@@ -4,6 +4,8 @@
 1. Linux
 2. Java 11+
 3. GCC: in order to get the flags for `open()` in `jaydio`
+4. Docker (optional)
+5. Docker Compose plugin (optional)
 
 
 ## Disk related command reference
@@ -14,7 +16,61 @@
 - `sudo mount /dev/nvme1n1 /slowstorage`
 
 
-## Install and configure Tomcat 9 on Ubuntu
+## Tomcat
+
+### Using Docker Compose (recommended)
+Installing and configuring Tomcat manually is not needed if `PepCentricFrontend` is deployed with Docker Compose. Docker Compose is the recommended deployment method.
+
+`PepCentricFrontend` reads deployment-specific URLs and passwords from runtime environment variables. Configure these values in Docker Compose or before Tomcat starts:
+
+```shell
+SERVER_URL=http://<backend-host>:50001
+DB_URL=jdbc:mysql://<mysql-host>/fragmentsearcher?serverTimezone=US/Eastern
+DB_USERNAME=pepcentric
+DB_PASSWORD=<password>
+```
+
+Recommended Docker Compose configuration:
+
+```yaml
+services:
+  pepcentricfrontend-app:
+    image: pepcentricfrontend:latest
+    container_name: pepcentricfrontend-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:8080"
+    environment:
+      SERVER_URL: "http://<backend-host>:50001"
+      DB_URL: "jdbc:mysql://<mysql-host>/fragmentsearcher?serverTimezone=US/Eastern"
+      DB_USERNAME: "pepcentric"
+      DB_PASSWORD: "<password>"
+```
+
+Start the frontend server from the directory containing `docker-compose.yml`:
+
+```shell
+docker compose up -d
+```
+
+Stop and remove the frontend container:
+
+```shell
+docker compose down
+```
+
+Stop and remove the frontend container and image:
+
+```shell
+docker compose down --rmi all
+```
+
+### Set up on host
+Use this section only when deploying the WAR directly to a system Tomcat installation.
+
+#### Install and configure Tomcat 9 on Ubuntu
 ```shell
 sudo apt update
 sudo apt install tomcat9 tomcat9-admin
@@ -26,17 +82,35 @@ sudo ufw allow from any to any port 8080 proto tcp
 sudo vim /etc/tomcat9/tomcat-users.xml
 
 # change max upload file size limit
-sudo vim /usr/share/tomcat9-admin/manager/WEB-INF/web.xml 
+sudo vim /usr/share/tomcat9-admin/manager/WEB-INF/web.xml
 
 # add JAVA_HOME to the setenv.sh file
-sudo vim /usr/share/tomcat9/bin/setenv.sh 
+sudo vim /usr/share/tomcat9/bin/setenv.sh
 
 sudo systemctl restart tomcat9
 ```
 
-__Note:__ Must put `mysql-connector-java-\*.jar` to `/var/lib/tomcat9/lib/`` and `/usr/share/tomcat9/lib/`` because we do not pack it in the war to prevent an issue in Tomcat.
+__Note:__ Must put `mysql-connector-java-*.jar` in `/var/lib/tomcat9/lib/` and `/usr/share/tomcat9/lib/` because we do not pack it in the war to prevent an issue in Tomcat.
 
-### Useful tips
+#### Configure `PepCentricFrontend` WAR
+`PepCentricFrontend` reads deployment-specific URLs and passwords from runtime environment variables. For a manual system Tomcat install on Ubuntu, put the exports in `/usr/share/tomcat9/bin/setenv.sh`:
+
+```shell
+#!/bin/sh
+
+export SERVER_URL="http://<backend-host>:50001"
+export DB_URL="jdbc:mysql://<mysql-host>/fragmentsearcher?serverTimezone=US/Eastern"
+export DB_USERNAME="pepcentric"
+export DB_PASSWORD="<password>"
+```
+
+Then restart Tomcat:
+
+```shell
+sudo systemctl restart tomcat9
+```
+
+#### Useful tips
 Stop and start tomcat:
 ```shell
 service tomcat stop

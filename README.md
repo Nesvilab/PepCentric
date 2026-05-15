@@ -2,7 +2,7 @@ PepCentric is a tool that can search proteins and peptides against repository-sc
 
 
 # How to use it
-- Our public PepCentric website: [http://peptidecentric.org:8080/](http://peptidecentric.org:8080/)
+- Our public PepCentric website: [http://peptidecentric.org/](http://peptidecentric.org/)
 - Our [RESTful API](api.md)
 
 
