@@ -168,8 +168,7 @@ sudo service mysql start
 
 
 ## Directory structure
-### `~/pepcentric` directory example.
-`pepcentric_scratch` directory is empty at the beginning. It contains users' requests and logs.
+### `~/pepcentric` directory example
 ```shell
 .
 ├── mysql-connector-java-8.0.33.jar
@@ -179,9 +178,12 @@ sudo service mysql start
 └── enzymatic_decoy_hist.bin
 ```
 
-`*.bin` are decoy histograms. Please refer to [Steps to generate `decoy_hist.bin`](#steps-to-generate-decoy_histbin) for how to generate it.
+- `pepcentric_scratch` directory is empty at the beginning. It contains users' requests and logs.
+- `*.bin` are decoy histograms. Please refer to [Steps to generate `decoy_hist.bin`](#steps-to-generate-decoy_histbin) for how to generate it.
 
-`run_pepcentric.sh` example.
+*Note: It should be generated for each index separately. When the content of an index is changed, the decoy_hist.bin should be regenerated.*
+
+#### `run_pepcentric.sh` example
 ```shell
 #!/bin/bash
 
@@ -227,8 +229,7 @@ pepcentric.repo.overlay.prefix =
 pepcentric.repo.overlay.overlay_name =  
 ```
 
-### `/slowstorage` directory example.
-`blockMetadata.txt` record the structure of block disk. `*.pepXML` files will be converted to `*.pepBIN` files in the index building step. `index` directory is empty at the beginning. `params` directory contains modifications for each index. `targetindex.txt` record the index name.
+### `/slowstorage` directory example
 ```shell
 .
 ├── pepcentric
@@ -251,7 +252,14 @@ pepcentric.repo.overlay.overlay_name =
         └── tmt.pepcentricparams
 ```
 
-`blockMetadata.txt` example.
+- `blockMetadata.txt` record the structure of block disk.
+- `*.pepXML` files will be converted to `*.pepBIN` files in the index building step.
+- `index` directory is empty at the beginning. 
+- `params` directory contains PepCentric parameter files for each index. 
+- The `*.pepcentricparams` file name should be the same as the index name because it is used to pair the parameters with the index.
+- `targetindex.txt` record the index name for each dataset.
+
+#### `blockMetadata.txt` example
 ```shell
 device /dev/disk/by-id/nvme-Amazon_EC2_NVMe_Instance_Storage
 alloc tmt 0 200G
@@ -260,7 +268,26 @@ alloc lf2 800G 1200G
 ```
 Make sure of having the permission to read and write the NVMe drive.
 
-`tmt.pepcentricparams` example.
+
+#### `targetindex.txt` example
+```shell
+tmt16
+url@ https://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=PXD034789
+publication@ Deep Proteomics Network and Machine Learning Analysis of Human Cerebrospinal Fluid in Japanese Encephalitis Virus Infection
+sample source@ patient
+organ@ cerebrospinal fluid
+disease@ Japanese encephalitis virus infection
+```
+
+- The first line is the name of the index
+- The second line is the URL of the dataset (optional)
+- the third line is the name of the publication (optional)
+- The forth line is the name of the sample source (optional)
+- The fifth line is the name of the organ (optional)
+- The sixth line is the name of the disease (optional) 
+
+
+#### `tmt.pepcentricparams` example
 ```shell
 precursor_mass_lower = -20			# Lower bound of the precursor mass window.
 precursor_mass_upper = 20			# Upper bound of the precursor mass window.
@@ -370,4 +397,3 @@ Example: java -Xmx64g -cp peptidecentricsearch.jar:mysql-connector-java-8.0.33.j
          java -Xmx64g -cp peptidecentricsearch.jar:mysql-connector-java-8.0.33.jar pepcentric.nullmodel.GenerateDecoyHistBin pepcentric_scratch/ decoy-% nonspecific hla
 ``` 
 The output will be in `[pepcentic scratch dir]`.
-
