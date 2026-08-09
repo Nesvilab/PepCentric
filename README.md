@@ -14,9 +14,12 @@ PepCentric is a tool that can search proteins and peptides against repository-sc
 - Click "submit"
 - There will be a job ID displayed on the webpage. Please make a note of the ID in case you wish to revisit the results.
 
-There is also a "get results" button that can be used to retrieve old results based on the job ID.
+A query must be given either in the input box or as an uploaded file, not both. An uploaded file has
+to be smaller than 1 MB, and text typed into the input box may not exceed 100000 amino acids.
 
-There is also a "dump" button to export all results given a job ID. It might take a long time if there are many entries.
+The "Get Results" link in the navigation bar can be used to retrieve old results based on the job ID.
+
+There is also a "dump" button to export all results given a job ID. It might take a long time if there are many entries. Each result table can also be exported on its own, as CSV or as Excel.
 
 
 # How to build your own PepCentric server

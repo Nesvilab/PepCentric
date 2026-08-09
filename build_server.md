@@ -4,8 +4,7 @@
 1. Linux
 2. Java 11+
 3. GCC: in order to get the flags for `open()` in `jaydio`
-4. Docker (optional)
-5. Docker Compose plugin (optional)
+4. Docker and the Docker Compose plugin, for the recommended frontend deployment
 
 
 ## Disk related command reference
@@ -21,14 +20,21 @@
 ### Using Docker Compose (recommended)
 Installing and configuring Tomcat manually is not needed if `PepCentricFrontend` is deployed with Docker Compose. Docker Compose is the recommended deployment method.
 
-`PepCentricFrontend` reads deployment-specific URLs and passwords from runtime environment variables. Configure these values in Docker Compose or before Tomcat starts:
+#### Build the WAR file
+The `Dockerfile` copies the WAR in under its exact name, so build it in the `PepCentric-frontend`
+working copy and put it beside the `Dockerfile`:
 
 ```shell
-SERVER_URL=http://<backend-host>:50001
-DB_URL=jdbc:mysql://<mysql-host>/fragmentsearcher?serverTimezone=US/Eastern
-DB_USERNAME=pepcentric
-DB_PASSWORD=<password>
+./gradlew war   # writes build/libs/PepCentricFrontend-<version>.war
 ```
+
+On Apple silicon, change `JAVA_HOME` in the `Dockerfile` from `java-11-openjdk-amd64` to
+`java-11-openjdk-arm64`.
+
+#### Configure the frontend
+`PepCentricFrontend` reads `SERVER_URL`, `DB_URL`, `DB_USERNAME` and `DB_PASSWORD` from runtime
+environment variables. The MySQL database is not created by the compose file; set it up separately as
+described under [SQL database](#sql-database).
 
 Recommended Docker Compose configuration:
 
@@ -43,10 +49,19 @@ services:
     ports:
       - "80:8080"
     environment:
-      SERVER_URL: "http://<backend-host>:50001"
-      DB_URL: "jdbc:mysql://<mysql-host>/fragmentsearcher?serverTimezone=US/Eastern"
-      DB_USERNAME: "pepcentric"
-      DB_PASSWORD: "<password>"
+      SERVER_URL: ${SERVER_URL:?Set SERVER_URL to the externally managed backend server URL}
+      DB_URL: ${DB_URL:?Set DB_URL to the externally managed MySQL JDBC URL}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME for the externally managed MySQL database}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD for the externally managed MySQL database}
+```
+
+Supply the values in a `.env` file beside `docker-compose.yml`, excluded from version control:
+
+```shell
+SERVER_URL=http://<backend-host>:50001
+DB_URL=jdbc:mysql://<mysql-host>/fragmentsearcher?serverTimezone=US/Eastern
+DB_USERNAME=pepcentric
+DB_PASSWORD=<password>
 ```
 
 Start the frontend server from the directory containing `docker-compose.yml`:
@@ -158,6 +173,9 @@ mysql> CREATE TABLE jobque (id bigint NOT NULL AUTO_INCREMENT, version bigint, t
 mysql> CREATE INDEX id ON jobque (id);
 ```
 
+The API server drops and recreates two further tables, `indexes` and `datasets`, every time it
+starts, so the database user needs `DROP` and `CREATE` privileges as well.
+
 ### Useful commands
 ```shell
 mysqldump -u pepcentric -p --no-tablespaces --databases fragmentsearcher > dump.sql # backup a database
@@ -181,7 +199,7 @@ sudo service mysql start
 - `pepcentric_scratch` directory is empty at the beginning. It contains users' requests and logs.
 - `*.bin` are decoy histograms. Please refer to [Steps to generate `decoy_hist.bin`](#steps-to-generate-decoy_histbin) for how to generate it.
 
-*Note: It should be generated for each index separately. When the content of an index is changed, the decoy_hist.bin should be regenerated.*
+*Note: One file is generated per digestion type, covering every index that digestion type can reach, and it must be named `<digestion type>_decoy_hist.bin`. When the content of any covered index is changed, the file should be regenerated.*
 
 #### `run_pepcentric.sh` example
 ```shell
@@ -203,10 +221,12 @@ nohup java -Xmx10g -cp $pepcentric_jar:$mysql_jar pepcentric.api.APIServer --por
 nohup java -Xmx10g -cp $pepcentric_jar pepcentric.assembler.AssemblyServer $search_dir $index_root_dir $params_dir > assemblyserver.log 2>&1 &
 nohup java -Xmx20g -cp $pepcentric_jar:$mysql_jar pepcentric.digestion.DigestionServer $params_dir $search_dir > digestionserver.log 2>&1 &
 nohup java -Xmx20g -cp $pepcentric_jar pepcentric.searcher.SearchServer $port /slowstorage/pepcentric/index/tmt/ /slowstorage/pepcentric/index/tmt/scans_100_0.01_0.1/deployed.dat $search_dir $params_dir/tmt.pepcentricparams > searchserver_tmt.log 2>&1 &
-nohup java -Xmx20g -cp $pepcentric_jar pepcentric.searcher.SearchServer $port /slowstorage/pepcentric/index/lf/ /slowstorage/pepcentric/index/lf/scans_100_0.01_0.1/deployed.dat $search_dir $params_dir/tmt.pepcentricparams > searchserver_lf.log 2>&1 &
-nohup java -Xmx20g -cp $pepcentric_jar pepcentric.searcher.SearchServer $port /slowstorage/pepcentric/index/lf2/ /slowstorage/pepcentric/index/lf2/scans_100_0.01_0.1/deployed.dat $search_dir $params_dir/tmt.pepcentricparams > searchserver_lf2.log 2>&1 &
-nohup java -Xmx20g -cp $pepcentric_jar pepcentric.searcher.SearchServer $port /slowstorage/pepcentric/index/hla/ /slowstorage/pepcentric/index/hla/scans_100_0.01_0.1/deployed.dat $search_dir $params_dir/tmt.pepcentricparams > searchserver_hla.log 2>&1 &
+nohup java -Xmx20g -cp $pepcentric_jar pepcentric.searcher.SearchServer $port /slowstorage/pepcentric/index/lf/ /slowstorage/pepcentric/index/lf/scans_100_0.01_0.1/deployed.dat $search_dir $params_dir/lf.pepcentricparams > searchserver_lf.log 2>&1 &
+nohup java -Xmx20g -cp $pepcentric_jar pepcentric.searcher.SearchServer $port /slowstorage/pepcentric/index/lf2/ /slowstorage/pepcentric/index/lf2/scans_100_0.01_0.1/deployed.dat $search_dir $params_dir/lf2.pepcentricparams > searchserver_lf2.log 2>&1 &
+nohup java -Xmx20g -cp $pepcentric_jar pepcentric.searcher.SearchServer $port /slowstorage/pepcentric/index/hla/ /slowstorage/pepcentric/index/hla/scans_100_0.01_0.1/deployed.dat $search_dir $params_dir/hla.pepcentricparams > searchserver_hla.log 2>&1 &
 ```
+
+Each search server takes the parameter file of the index it serves.
 
 ### `~/.pepcentric.config` example
 ```shell
@@ -225,9 +245,27 @@ pepcentric.repo.db.password =
 pepcentric.repo.db.dbname =  
 
 pepcentric.repo.pathtranslator.poolfilename =  
-pepcentric.repo.overlay.prefix =  
-pepcentric.repo.overlay.overlay_name =  
+
+pepcentric.fasta = /slowstorage/pepcentric/proteome.fas  
+pepcentric.fasta.decoyprefix = rev_  
+
+pepcentric.params = /slowstorage/pepcentric/params/  
+
+pepcentric.commonptm = 79.96630(aa=ST);42.01060(aa=[^TSKYHR);15.99490(aa=TESQLIWHVRMYFPNKD);0.98400(aa=NQC)  
 ```
+
+The last three keys drive [`peptide_type`](api.md#the-peptide_type-field) and
+[`caution`](api.md#the-caution-field):
+
+- `pepcentric.fasta` is the reference proteome peptides are compared against for a SAAV. Headers
+  starting with `pepcentric.fasta.decoyprefix` are skipped, so a combined target-decoy file works.
+- `pepcentric.params` is the **directory** holding the `*.pepcentricparams` files, not one of them.
+  Give it the same value `run_pepcentric.sh` uses for `params_dir`.
+- `pepcentric.commonptm` lists the modifications `caution` treats as common, separated by `;`, each a
+  mass optionally followed by `(aa=<residues>)`.
+
+An empty `pepcentric.fasta` leaves every `peptide_type` 0 or 1, and an empty `pepcentric.params`
+leaves it 0 or 2. Both are read at start-up, so changing either requires a restart.
 
 ### `/slowstorage` directory example
 ```shell
@@ -247,6 +285,7 @@ pepcentric.repo.overlay.overlay_name =
     │           └── b1906_293T_proteinID_01A_QE3_122212.mzBIN
     ├── index
     └── params
+        ├── hla.pepcentricparams
         ├── lf.pepcentricparams
         ├── lf2.pepcentricparams
         └── tmt.pepcentricparams
@@ -265,8 +304,10 @@ device /dev/disk/by-id/nvme-Amazon_EC2_NVMe_Instance_Storage
 alloc tmt 0 200G
 alloc lf 200G 800G
 alloc lf2 800G 1200G
+alloc hla 1200G 1400G
 ```
-Make sure of having the permission to read and write the NVMe drive.
+Make sure of having the permission to read and write the NVMe drive. Every index needs both a block
+allocation here and a `*.pepcentricparams` file of its own name.
 
 
 #### `targetindex.txt` example
@@ -380,6 +421,14 @@ This step will write indices to the fast disk.
 ## Start PepCentric server
 Using `run_pepcentric.sh`.
 
+Stop every backend process using
+```shell
+pkill -9 -ef peptidecentricsearch
+```
+
+Each enzyme value users may submit needs a `<enzyme>_decoy_hist.bin` of its own passed through
+`--decoy-peptides-bin`, otherwise its jobs fail when their results are requested.
+
 
 ## Steps to generate `decoy_hist.bin`
 1. Search decoy proteins using
@@ -393,7 +442,9 @@ Example: java -cp peptidecentricsearch.jar:mysql-connector-java-8.0.33.jar pepce
 ```shell
 Usage: java -cp peptidecentricsearch.jar:mysql-connector-java-8.0.33.jar pepcentric.nullmodel.GenerateDecoyHistBin [pepcentic scratch dir] [job name pattern using % for wildcard] [decoy hist bin prefix] [index name 1] [index name 2]...
   [decoy hist bin prefix] must match the digestion parameter, such as enzymatic
-Example: java -Xmx64g -cp peptidecentricsearch.jar:mysql-connector-java-8.0.33.jar pepcentric.nullmodel.GenerateDecoyHistBin pepcentric_scratch/ decoy-% enzymatic lf bioplex tmt
-         java -Xmx64g -cp peptidecentricsearch.jar:mysql-connector-java-8.0.33.jar pepcentric.nullmodel.GenerateDecoyHistBin pepcentric_scratch/ decoy-% nonspecific hla
+Example: java -Xmx64g -cp peptidecentricsearch.jar:mysql-connector-java-8.0.33.jar pepcentric.nullmodel.GenerateDecoyHistBin pepcentric_scratch/ enzymatic-decoy-% enzymatic lf bioplex tmt
+         java -Xmx64g -cp peptidecentricsearch.jar:mysql-connector-java-8.0.33.jar pepcentric.nullmodel.GenerateDecoyHistBin pepcentric_scratch/ nonspecific-decoy-% nonspecific hla
 ``` 
 The output will be in `[pepcentic scratch dir]`.
+
+The job name pattern has to match the prefix given in step 1, which is extended with `-<shard number>`.
