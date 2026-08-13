@@ -335,7 +335,6 @@ precursor_mass_upper = 20			# Upper bound of the precursor mass window.
 precursor_mass_units = 1			# Precursor mass tolerance units (0 for Da, 1 for ppm).
 fragment_mass_tolerance = 20			# Fragment mass tolerance (window is +/- this value).
 fragment_mass_units = 1			# Fragment mass tolerance units (0 for Da, 1 for ppm).
-deisotope = 1			# Perform deisotoping or not
 
 min_fragments_modelling = 2			# Minimum number of matched peaks in PSM for inclusion in statistical modeling.
 min_matched_fragments = 5			# Minimum number of matched peaks for PSM to be reported.
