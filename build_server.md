@@ -2,7 +2,7 @@
 
 ## Requirements
 1. Linux
-2. Java 11+
+2. Java 17+
 3. GCC: in order to get the flags for `open()` in `jaydio`
 4. Docker and the Docker Compose plugin, for the recommended frontend deployment
 
